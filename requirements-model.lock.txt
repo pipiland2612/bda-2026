@@ -16,7 +16,7 @@ kiwisolver==1.5.1
 llvmlite==0.47.0
 logical-unification==0.4.7
 markdown-it-py==4.3.0
-matplotlib==3.11.2
+matplotlib==3.10.9
 mdurl==0.1.2
 miniKanren==1.0.5
 multipledispatch==1.0.0
@@ -35,6 +35,7 @@ pytensor==2.38.3
 pytest==9.2.0
 python-dateutil==4.0.0
 rich==15.0.0
+ruff==0.17.6
 scipy==1.18.1
 setuptools==84.2.1
 threadpoolctl==3.8.0

@@ -4,6 +4,7 @@ arviz<1
 numpy
 pandas
 xarray
-matplotlib
+matplotlib<3.11
 pytest
 netCDF4
+ruff
