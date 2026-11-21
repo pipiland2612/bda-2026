@@ -9,7 +9,7 @@ import numpy as np
 import pymc as pm
 import xarray as xr
 
-from models.pooled_data import FEATURES, ModelData
+from models.pooled_data import FEATURES, WIND_MEASURES, ModelData
 
 
 @dataclass(frozen=True)
@@ -45,6 +45,10 @@ def read_priors(path: Path, allow_provisional: bool = False) -> PriorSpec:
     try:
         if set(config["coefficients"]) != set(FEATURES):
             raise ValueError("Priors must specify exactly the six model coefficients")
+        if config["coefficients"]["wind"].get("measure") not in WIND_MEASURES:
+            raise ValueError(
+                "Prior wind measure must explicitly match the data handoff"
+            )
         ranges = []
         for feature in FEATURES:
             c = config["coefficients"][feature]
@@ -113,6 +117,19 @@ class FitBundle:
     config: SamplingConfig
 
 
+def attach_keys(idata: az.InferenceData, data: ModelData) -> az.InferenceData:
+    """Persist actual observation identity in every observation-indexed group."""
+    coords = {
+        name: ("observation", data.keys[name].astype(str).to_numpy())
+        for name in ("station_id", "date")
+    }
+    for name in idata.groups():
+        group = getattr(idata, name)
+        if "observation" in group.dims:
+            setattr(idata, name, group.assign_coords(coords))
+    return idata
+
+
 def fit_pooled(data: ModelData, priors: PriorSpec, config: SamplingConfig) -> FitBundle:
     if data.y is None:
         raise ValueError("Training outcomes required")
@@ -134,7 +151,7 @@ def fit_pooled(data: ModelData, priors: PriorSpec, config: SamplingConfig) -> Fi
             progressbar=False,
             extend_inferencedata=True,
         )
-    return FitBundle(idata, priors, config)
+    return FitBundle(attach_keys(idata, data), priors, config)
 
 
 def predict_pooled(fit: FitBundle, new_data: ModelData, seed: int) -> xr.Dataset:

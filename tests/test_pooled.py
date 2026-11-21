@@ -10,7 +10,7 @@ from tests.test_pooled_data import frame
 
 
 def prior_config():
-    return dict(
+    result = dict(
         approved=True,
         rationale="SYNTHETIC test values, no scientific approval",
         sources=["synthetic fixture"],
@@ -21,6 +21,8 @@ def prior_config():
             for name in FEATURES
         },
     )
+    result["coefficients"]["wind"]["measure"] = "mean_of_hourly_maxima"
+    return result
 
 
 def test_prior_range_conversion_and_invalid_ranges():

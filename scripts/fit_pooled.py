@@ -13,6 +13,7 @@ import pymc as pm
 
 from models.pooled import (
     SamplingConfig,
+    attach_keys,
     build_pooled,
     fit_pooled,
     predict_pooled,
@@ -29,7 +30,18 @@ def write_json(path: Path, value) -> None:
     path.write_text(json.dumps(value, indent=2, allow_nan=False) + "\n")
 
 
-def verify_review(path: Path | None, priors: Path, data: Path, metadata: Path) -> None:
+def effective_prior_sha256(priors) -> str:
+    content = json.dumps(asdict(priors), indent=2, allow_nan=False) + "\n"
+    return hashlib.sha256(content.encode()).hexdigest()
+
+
+def verify_review(
+    path: Path | None,
+    priors: Path,
+    data: Path,
+    metadata: Path,
+    required_configurations=("baseline",),
+) -> None:
     if path is None:
         raise ValueError(
             "Production fitting needs --prior-review after prior predictive review"
@@ -61,10 +73,33 @@ def verify_review(path: Path | None, priors: Path, data: Path, metadata: Path) -
         raise ValueError(
             "Reviewed prior run does not match the production data and specification"
         )
+    baseline = read_priors(priors)
+    configurations = {
+        "baseline": (baseline, "prior.nc"),
+        "wide-slopes": (baseline.sensitivity(), "wide-slopes-prior.nc"),
+    }
+    for name in required_configurations:
+        if name not in review.get("reviewed_configurations", []):
+            raise ValueError(f"Prior review must explicitly cover {name}")
+        expected, filename = configurations[name]
+        entry = manifest.get("prior_configurations", {}).get(name, {})
+        if entry.get("effective_prior_sha256") != effective_prior_sha256(expected):
+            raise ValueError(f"Reviewed effective configuration does not match {name}")
+        prior_file = manifest_path.parent / filename
+        if not prior_file.is_file() or entry.get("draws_sha256") != sha256(prior_file):
+            raise ValueError(
+                f"Reviewed prior predictions changed or are missing: {name}"
+            )
 
 
 def run_fit(
-    frame, priors, config, output: Path, synthetic: bool, prediction_frame=None
+    frame,
+    priors,
+    config,
+    output: Path,
+    synthetic: bool,
+    prediction_frame=None,
+    split_id=None,
 ):
     output.mkdir(parents=True, exist_ok=False)
     data, state = make_design(frame)
@@ -77,9 +112,14 @@ def run_fit(
     if prediction_frame is not None:
         pred, _ = make_design(prediction_frame.drop(columns="no2_daily"), state, False)
         predictions = predict_pooled(fit, pred, config.seed + 2)
+        predictions = predictions.assign_coords(
+            split_id=("observation", [str(split_id)] * len(pred.keys))
+        )
         predictions.attrs["synthetic"] = str(synthetic)
         predictions.to_netcdf(output / "predictions.nc")
-        pred.keys.to_csv(output / "prediction_keys.csv", index=False)
+        pred.keys.assign(split_id=str(split_id)).to_csv(
+            output / "prediction_keys.csv", index=False
+        )
     return fit
 
 
@@ -105,10 +145,19 @@ def main(argv=None):
     parser.add_argument("--seed", type=int, default=20261121)
     parser.add_argument("--target-accept", type=float, default=0.9)
     args = parser.parse_args(argv)
+    if args.splits is not None and args.mode != "heldout":
+        raise ValueError(
+            "--splits is only supported in heldout mode; other modes fit all rows"
+        )
     if args.output.exists():
         raise FileExistsError(f"Output exists; choose a new directory: {args.output}")
     frame = load_analysis(args.data, args.metadata)
     priors = read_priors(args.priors, allow_provisional=args.synthetic)
+    if (
+        priors.metadata["coefficients"]["wind"]["measure"]
+        != json.loads(args.metadata.read_text())["wind_measure"]
+    ):
+        raise ValueError("Prior wind measure does not match the data handoff")
     if args.synthetic and (
         json.loads(args.metadata.read_text()).get("synthetic") is not True
         or priors.metadata.get("synthetic") is not True
@@ -130,7 +179,12 @@ def main(argv=None):
         splits = pd.read_csv(args.splits, dtype=str)
         validate_splits(frame, splits)
     if args.mode != "prior" and not args.synthetic:
-        verify_review(args.prior_review, args.priors, args.data, args.metadata)
+        required = (
+            ("baseline", "wide-slopes") if args.mode == "sensitivity" else ("baseline",)
+        )
+        verify_review(
+            args.prior_review, args.priors, args.data, args.metadata, required
+        )
     config = SamplingConfig(
         args.chains, args.warmup, args.draws, args.seed, args.target_accept
     )
@@ -160,13 +214,28 @@ def main(argv=None):
             data, state = make_design(frame)
             frame.to_csv(args.output / "training.csv", index=False)
             write_json(args.output / "transforms.json", asdict(state))
-            write_json(args.output / "effective_priors.json", asdict(priors))
-            with build_pooled(data, priors):
-                prior = pm.sample_prior_predictive(
-                    draws=config.draws, random_seed=config.seed
+            manifest["prior_configurations"] = {}
+            for name, effective, filename, config_file in [
+                ("baseline", priors, "prior.nc", "effective_priors.json"),
+                (
+                    "wide-slopes",
+                    priors.sensitivity(),
+                    "wide-slopes-prior.nc",
+                    "effective_wide_priors.json",
+                ),
+            ]:
+                write_json(args.output / config_file, asdict(effective))
+                with build_pooled(data, effective):
+                    prior = pm.sample_prior_predictive(
+                        draws=config.draws, random_seed=config.seed
+                    )
+                prior = attach_keys(prior, data)
+                prior.attrs["synthetic"] = str(args.synthetic)
+                prior.to_netcdf(args.output / filename)
+                manifest["prior_configurations"][name] = dict(
+                    effective_prior_sha256=effective_prior_sha256(effective),
+                    draws_sha256=sha256(args.output / filename),
                 )
-            prior.attrs["synthetic"] = str(args.synthetic)
-            prior.to_netcdf(args.output / "prior.nc")
         elif args.mode == "heldout":
             manifest["splits"] = []
             for i, (split_id, split) in enumerate(
@@ -179,7 +248,7 @@ def main(argv=None):
                 test = frame[
                     frame.date.isin(split.loc[split.partition.eq("test"), "date"])
                 ]
-                run_fit(train, priors, config, output, args.synthetic, test)
+                run_fit(train, priors, config, output, args.synthetic, test, split_id)
                 manifest["splits"].append(
                     dict(split_id=split_id, directory=output.name)
                 )

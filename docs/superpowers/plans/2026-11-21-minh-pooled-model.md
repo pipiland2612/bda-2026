@@ -49,12 +49,12 @@ Types below live in their owning modules. `TransformState` stores three training
 
 **Interfaces:** `load_analysis(path: Path, metadata_path: Path) -> pd.DataFrame`; `validate_splits(frame: pd.DataFrame, assignments: pd.DataFrame) -> None`; `make_design(frame: pd.DataFrame, state: TransformState | None = None, include_outcome: bool = True) -> tuple[ModelData, TransformState]`.
 
-- [ ] Create the isolated execution workspace with the worktree skill and preserve these approved planning files there. Set up `.venv`; resolve compatible modeling/test dependencies, record direct requirements and a tested lock. All commands below use `rtk .venv/bin/python`.
-- [ ] Write failing tests asserting rejection of absent columns, duplicate keys, malformed or non-2024 dates, NaN/infinite covariates, and nonpositive observed NO₂. Require canonical columns from the design; prediction inputs may omit NO₂.
-- [ ] Add tests: Saturday/Sunday flags match dates; 1 January 2024 gives sin=0 and cos=1; leap day is valid. Centers fitted to training values `[2, 4]` remain 3 when transforming a held-out value 100. Fixed ordered features are `weekend`, `wind`, `temperature`, `rain`, `sin`, `cos`.
-- [ ] Add split tests for unique `(split_id,date)` assignments, train/test disjointness, train dates strictly before test dates for future prediction, and complete whole-date assignment. Require shared row keys and schema/units, wind definition, matching rule, and approval status in a companion handoff JSON. Validate required metadata fields; do not invent provider approval.
-- [ ] Run `rtk .venv/bin/python -m pytest tests/test_pooled_data.py -q`; confirm meaningful failures, then implement the three interfaces and dataclasses. Compute centers only when `state` is absent; keep ordering stable and forbid empty data partitions.
-- [ ] Rerun the tests; expect all to pass. Commit the focused contract and environment changes.
+- [x] Create the isolated execution workspace with the worktree skill and preserve these approved planning files there. Set up `.venv`; resolve compatible modeling/test dependencies, record direct requirements and a tested lock. All commands below use `rtk .venv/bin/python`.
+- [x] Write failing tests asserting rejection of absent columns, duplicate keys, malformed or non-2024 dates, NaN/infinite covariates, and nonpositive observed NO₂. Require canonical columns from the design; prediction inputs may omit NO₂.
+- [x] Add tests: Saturday/Sunday flags match dates; 1 January 2024 gives sin=0 and cos=1; leap day is valid. Centers fitted to training values `[2, 4]` remain 3 when transforming a held-out value 100. Fixed ordered features are `weekend`, `wind`, `temperature`, `rain`, `sin`, `cos`.
+- [x] Add split tests for unique `(split_id,date)` assignments, train/test disjointness, train dates strictly before test dates for future prediction, and complete whole-date assignment. Require shared row keys and schema/units, wind definition, matching rule, and approval status in a companion handoff JSON. Validate required metadata fields; do not invent provider approval.
+- [x] Run `rtk .venv/bin/python -m pytest tests/test_pooled_data.py -q`; confirm meaningful failures, then implement the three interfaces and dataclasses. Compute centers only when `state` is absent; keep ordering stable and forbid empty data partitions.
+- [x] Rerun the tests; expect all to pass. Commit the focused contract and environment changes.
 
 ### Task 2: Specify priors and build the pooled model
 
@@ -62,11 +62,11 @@ Types below live in their owning modules. `TransformState` stores three training
 
 **Interfaces:** consumes `ModelData`; produces `read_priors(path: Path, allow_provisional: bool = False) -> PriorSpec`, `ratio_prior(lower: float, upper: float) -> tuple[float,float]`, `build_pooled(data: ModelData, priors: PriorSpec) -> pm.Model`.
 
-- [ ] Write failing tests for `0 < lower < upper`, finite positive prior SDs, all six named slopes, explicit alpha and sigma priors, and required rationale/approval fields. Check that `ratio_prior(0.7,1.1)` matches the worksheet formula as an arithmetic test only.
-- [ ] Add structural tests that the model has alpha, six coefficients, positive sigma, and a lognormal observation distribution, with no station effects. Assert design column order matches prior order. Check predicted log location against a hand-calculated linear predictor using known coefficients.
-- [ ] Run `rtk .venv/bin/python -m pytest tests/test_pooled.py -q`; verify failures, then implement explicit Normal alpha/coefficient priors and HalfNormal sigma, with parameters supplied through `PriorSpec`. Never rely on implicit software priors.
-- [ ] Add a prior-template JSON containing named parameter fields, units, provenance, approval flags, and explanatory nulls for unelicited numbers. Its validation must clearly explain what to fill before production fitting. Use separate explicitly synthetic numeric fixtures for tests.
-- [ ] Test a small fixed-seed prior predictive run for positive finite outcomes, expected dimensions, and preserved row keys. Run all Task 1–2 tests and commit.
+- [x] Write failing tests for `0 < lower < upper`, finite positive prior SDs, all six named slopes, explicit alpha and sigma priors, and required rationale/approval fields. Check that `ratio_prior(0.7,1.1)` matches the worksheet formula as an arithmetic test only.
+- [x] Add structural tests that the model has alpha, six coefficients, positive sigma, and a lognormal observation distribution, with no station effects. Assert design column order matches prior order. Check predicted log location against a hand-calculated linear predictor using known coefficients.
+- [x] Run `rtk .venv/bin/python -m pytest tests/test_pooled.py -q`; verify failures, then implement explicit Normal alpha/coefficient priors and HalfNormal sigma, with parameters supplied through `PriorSpec`. Never rely on implicit software priors.
+- [x] Add a prior-template JSON containing named parameter fields, units, provenance, approval flags, and explanatory nulls for unelicited numbers. Its validation must clearly explain what to fill before production fitting. Use separate explicitly synthetic numeric fixtures for tests.
+- [x] Test a small fixed-seed prior predictive run for positive finite outcomes, expected dimensions, and preserved row keys. Run all Task 1–2 tests and commit.
 
 ### Task 3: Fit, predict, and record reproducible runs
 
@@ -74,12 +74,12 @@ Types below live in their owning modules. `TransformState` stores three training
 
 **Interfaces:** `fit_pooled(data: ModelData, priors: PriorSpec, config: SamplingConfig) -> FitBundle`; `predict_pooled(fit: FitBundle, new_data: ModelData, seed: int) -> xr.Dataset`; CLI module `python -m scripts.fit_pooled`.
 
-- [ ] Add failing CLI tests for missing approvals, absent handoff metadata, missing split assignments in held-out mode, overlapping output directories, and prediction inputs that incorrectly expose held-out outcomes to the fitting interface. Assert invalid requests fail before sampling.
-- [ ] Implement CLI flags `--data`, `--metadata`, `--priors`, `--output`, `--mode prior|posterior|heldout|sensitivity`, `--splits` for held-out runs, and `--synthetic` for explicitly labeled demonstrations. Production posterior modes also require `--prior-review` pointing to a JSON record containing `reviewed_by`, `reviewed_at`, `prior_sha256`, `prior_run_manifest_sha256`, and `accepted: true`; reject mismatched hashes.
-- [ ] Implement fixed initial settings of 4 chains, 1,000 warmup, 1,000 retained draws, seed 20261121, and target acceptance 0.9, with explicit CLI overrides recorded in manifests. First use small settings for synthetic integration checks; never claim those checks meet scientific convergence criteria.
-- [ ] Save input/config hashes, seed, versions, sampling settings, ordered station/date keys, training transforms, and run status. Keep saved posterior/prior draws separate. Held-out mode fits only training rows, strips outcomes from prediction data, and exports chain/draw/observation predictions labeled with split, station, and date. Require each test key exactly once per split.
-- [ ] Implement sensitivity using doubled slope prior SDs with means, alpha, and sigma priors fixed. Save baseline and sensitivity configs and separate runs.
-- [ ] Add a synthetic sampling/prediction integration test with expected shape, finite positive predictions, and matching keys. Run `rtk .venv/bin/python -m pytest tests/test_pooled_cli.py tests/test_pooled.py -q`; commit after passing. Ignore `.venv/`, model run directories, and large draw files without changing raw-data tracking rules.
+- [x] Add failing CLI tests for missing approvals, absent handoff metadata, missing split assignments in held-out mode, overlapping output directories, and prediction inputs that incorrectly expose held-out outcomes to the fitting interface. Assert invalid requests fail before sampling.
+- [x] Implement CLI flags `--data`, `--metadata`, `--priors`, `--output`, `--mode prior|posterior|heldout|sensitivity`, `--splits` for held-out runs, and `--synthetic` for explicitly labeled demonstrations. Production posterior modes also require `--prior-review` pointing to a JSON record containing `reviewed_by`, `reviewed_at`, `prior_sha256`, `prior_run_manifest_sha256`, and `accepted: true`; reject mismatched hashes.
+- [x] Implement fixed initial settings of 4 chains, 1,000 warmup, 1,000 retained draws, seed 20261121, and target acceptance 0.9, with explicit CLI overrides recorded in manifests. First use small settings for synthetic integration checks; never claim those checks meet scientific convergence criteria.
+- [x] Save input/config hashes, seed, versions, sampling settings, ordered station/date keys, training transforms, and run status. Keep saved posterior/prior draws separate. Held-out mode fits only training rows, strips outcomes from prediction data, and exports chain/draw/observation predictions labeled with split, station, and date. Require each test key exactly once per split.
+- [x] Implement sensitivity using doubled slope prior SDs with means, alpha, and sigma priors fixed. Save baseline and sensitivity configs and separate runs.
+- [x] Add a synthetic sampling/prediction integration test with expected shape, finite positive predictions, and matching keys. Run `rtk .venv/bin/python -m pytest tests/test_pooled_cli.py tests/test_pooled.py -q`; commit after passing. Ignore `.venv/`, model run directories, and large draw files without changing raw-data tracking rules.
 
 ### Task 4: Diagnostics and scientifically correct summaries
 
@@ -87,11 +87,11 @@ Types below live in their owning modules. `TransformState` stores three training
 
 **Interfaces:** `summarize_fit(fit: FitBundle) -> dict`; `summarize_weekend(beta_draws: np.ndarray) -> dict`; `residual_lags(keys: pd.DataFrame, residuals: np.ndarray, max_lag_days: int = 14) -> pd.DataFrame`; CLI `python -m scripts.check_pooled --run RUN_DIR`.
 
-- [ ] Write failing tests that mocked R-hat above 1.01, any divergence, or bulk/tail ESS below 400 generates a failed sampling gate. Missing/nonfinite diagnostics also fail. Preserve numerical diagnostics rather than replacing them with a single pass label.
-- [ ] Add exact arithmetic tests for `exp(beta)`, `100*(exp(beta)-1)`, equal-tailed 95% credible intervals, and `P(beta<0)`. Verify lognormal means use `exp(eta + sigma**2/2)`, distinct from medians. Test that draws are transformed before intervals are calculated.
-- [ ] Add residual tests where 1 and 3 January do not form a one-day lag; pair only the same station and actual lag dates, reporting pair counts and undefined correlations. Add export alignment tests on intentionally shuffled row keys.
-- [ ] Implement scalar summaries, MCSE, rank R-hat, bulk/tail ESS, divergences, trace plots, observed/replicated distribution and tail plots, station/weekend checks, and calendar-lag residual summaries. Compare baseline and sensitivity weekend summaries and predictions. Ensure finite dimensions and warn about inadequate group sample sizes.
-- [ ] Run `rtk .venv/bin/python -m pytest tests/test_pooled_diagnostics.py -q`; expect all to pass. Generate a synthetic diagnostic bundle and verify its plots render. Label sampling and predictive adequacy separately; the latter needs scientific review and must not be inferred from R-hat alone. Commit.
+- [x] Write failing tests that mocked R-hat above 1.01, any divergence, or bulk/tail ESS below 400 generates a failed sampling gate. Missing/nonfinite diagnostics also fail. Preserve numerical diagnostics rather than replacing them with a single pass label.
+- [x] Add exact arithmetic tests for `exp(beta)`, `100*(exp(beta)-1)`, equal-tailed 95% credible intervals, and `P(beta<0)`. Verify lognormal means use `exp(eta + sigma**2/2)`, distinct from medians. Test that draws are transformed before intervals are calculated.
+- [x] Add residual tests where 1 and 3 January do not form a one-day lag; pair only the same station and actual lag dates, reporting pair counts and undefined correlations. Add export alignment tests on intentionally shuffled row keys.
+- [x] Implement scalar summaries, MCSE, rank R-hat, bulk/tail ESS, divergences, trace plots, observed/replicated distribution and tail plots, station/weekend checks, and calendar-lag residual summaries. Compare baseline and sensitivity weekend summaries and predictions. Ensure finite dimensions and warn about inadequate group sample sizes.
+- [x] Run `rtk .venv/bin/python -m pytest tests/test_pooled_diagnostics.py -q`; expect all to pass. Generate a synthetic diagnostic bundle and verify its plots render. Label sampling and predictive adequacy separately; the latter needs scientific review and must not be inferred from R-hat alone. Commit.
 
 ### Task 5: Execute the approved scientific workflow when inputs are ready
 
@@ -110,14 +110,18 @@ Types below live in their owning modules. `TransformState` stores three training
 
 **Files:** `reports/minh-pooled-model.md`, `models/README.md`, `docs/ai-use.md`.
 
-- [ ] Document exact setup/run commands and the input/output contract, including the canonical schema, metadata requirements, split schema, draw coordinates, reviewed-prior gate, and pinned environment.
-- [ ] Write Minh's equation, predictor units, prior rationale, fitting settings, diagnostics, posterior checks, sensitivity, and weekend interpretation. Insert numerical results only after Task 5; otherwise label the results section pending.
-- [ ] Include a short presentation outline: pooled-model purpose, how the prior/checks work, weekend ratio and uncertainty, and limitations. Explain that this model cannot estimate station-specific weekend effects and that the association is not a causal traffic estimate.
-- [ ] Add an accurate AI-use entry describing planning, coding, testing, and any completed analysis, with human verification responsibilities. Do not imply teammates approved choices or reviewed results without evidence.
-- [ ] Run `rtk .venv/bin/python -m pytest tests/ -q` and `rtk git diff --check`. Review the complete diff for teammate-scope changes; perform the applicable independent code-review workflow. Commit verified work, report what passed and what remains pending, and offer the concrete branch for integration without merging automatically.
+- [x] Document exact setup/run commands and the input/output contract, including the canonical schema, metadata requirements, split schema, draw coordinates, reviewed-prior gate, and pinned environment.
+- [x] Write Minh's equation, predictor units, prior rationale, fitting settings, diagnostics, posterior checks, sensitivity, and weekend interpretation. Insert numerical results only after Task 5; otherwise label the results section pending.
+- [x] Include a short presentation outline: pooled-model purpose, how the prior/checks work, weekend ratio and uncertainty, and limitations. Explain that this model cannot estimate station-specific weekend effects and that the association is not a causal traffic estimate.
+- [x] Add an accurate AI-use entry describing planning, coding, testing, and any completed analysis, with human verification responsibilities. Do not imply teammates approved choices or reviewed results without evidence.
+- [x] Run `rtk .venv/bin/python -m pytest tests/ -q` and `rtk git diff --check`. Review the complete diff for teammate-scope changes; perform the applicable independent code-review workflow. Commit verified work, report what passed and what remains pending, and offer the concrete branch for integration without merging automatically.
 
 ## Plan self-review
 
 Coverage checked against the approved design: ownership, handoff gates, priors, model formula, transforms, fitting, prediction, diagnostics, sensitivity, result interpretation, disclosure, and validation all map to the tasks above. Interfaces and feature ordering are consistent. Each Review Focus item has a named test requirement. No production data readiness or scientific approval is presumed.
 
 Recommended execution: native implementation in this session, with independent branch review at the end. The tasks share a small data/model interface, and this avoids repeated implementer handoffs. Subagent-driven execution remains available if Minh prefers per-task independent review.
+
+## Execution status
+
+Tasks 1–4 implemented and tested. Task 5 remains pending the actual verified data/metadata, agreed numerical priors, prior predictive review and comparison split dates. Task 6 documentation is written and the independent review findings have been addressed. Full suite: 35 tests passed. Review hardening adds explicit wind measure matching, strict split schemas, hash-bound baseline/widened prior reviews, and observation keys in all predictive exports. Deferred minor: a combined keyed baseline/widened fitted-mean comparison table; separate files and plots already exist. No scientific results have been claimed from synthetic demonstrations.

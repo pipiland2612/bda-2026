@@ -27,6 +27,7 @@ def metadata():
             no2_daily="ug/m3", wind_speed="m/s", temperature="degC", precipitation="mm"
         ),
         wind_definition="daily mean of hourly maximum wind speed",
+        wind_measure="mean_of_hourly_maxima",
         weather_matching="verified mapping",
         missing_data_rule="owner-approved complete rows",
         source_validation="reviewed",
@@ -120,4 +121,29 @@ def test_retained_keys_and_wind_metadata_are_enforced(tmp_path):
     ]:
         m.write_text(json.dumps(bad))
         with pytest.raises(ValueError):
+            load_analysis(p, m)
+
+
+def test_station_specific_split_cannot_expand_to_other_stations():
+    split = pd.DataFrame(
+        {
+            "split_id": ["s", "s"],
+            "date": ["2024-01-01", "2024-01-06"],
+            "partition": ["train", "test"],
+            "station_id": ["a", "a"],
+        }
+    )
+    with pytest.raises(ValueError, match="columns"):
+        validate_splits(frame(), split)
+
+
+def test_placeholder_wind_handoff_is_not_an_approval(tmp_path):
+    p, m = tmp_path / "data.csv", tmp_path / "metadata.json"
+    frame().to_csv(p, index=False)
+    for bad in [
+        dict(metadata(), wind_definition="OWNER TO CONFIRM"),
+        dict(metadata(), wind_measure="unknown"),
+    ]:
+        m.write_text(json.dumps(bad))
+        with pytest.raises(ValueError, match="wind"):
             load_analysis(p, m)

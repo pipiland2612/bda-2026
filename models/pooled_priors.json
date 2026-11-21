@@ -6,7 +6,7 @@
   "sigma": {"scale": null},
   "coefficients": {
     "weekend": {"lower": null, "upper": null, "unit": "weekend versus weekday"},
-    "wind": {"lower": null, "upper": null, "unit": "+2 m/s of the agreed wind measure"},
+    "wind": {"lower": null, "upper": null, "unit": "+2 m/s of the agreed wind measure", "measure": null},
     "temperature": {"lower": null, "upper": null, "unit": "+10 degC"},
     "rain": {"lower": null, "upper": null, "unit": "+1 mm daily precipitation"},
     "sin": {"lower": null, "upper": null, "unit": "+1 annual sine term; review joint seasonal amplitude"},

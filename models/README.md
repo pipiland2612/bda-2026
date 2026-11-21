@@ -27,6 +27,7 @@ Supply a companion metadata JSON using this structure, filled with the owner's a
   "approved": false,
   "units": {"no2_daily":"ug/m3", "wind_speed":"m/s", "temperature":"degC", "precipitation":"mm"},
   "wind_definition": "OWNER TO CONFIRM",
+  "wind_measure": null,
   "weather_matching": "OWNER TO CONFIRM",
   "missing_data_rule": "OWNER TO CONFIRM",
   "source_validation": "OWNER TO CONFIRM",
@@ -34,6 +35,8 @@ Supply a companion metadata JSON using this structure, filled with the owner's a
   "retained_keys": [["station ID", "2024-01-01"]]
 }
 ```
+
+`wind_measure` must explicitly be `daily_mean_speed` or `mean_of_hourly_maxima`, describing both the measurement and daily aggregation. The wind coefficient's prior must contain the same `measure` field. Placeholder descriptions are rejected even if `approved` is true.
 
 `retained_keys` must list every station/date row in the CSV's order, shared by both model owners. Model transforms are training-only centering, wind / 2 m/s, temperature / 10°C, rain / 1 mm, Saturday/Sunday weekends, and a leap-year annual sine/cosine pair. Calendar variables are derived from date, not copied from unverified supplied columns.
 
@@ -48,20 +51,21 @@ rtk .venv/bin/python -m scripts.fit_pooled --data data/processed/analysis_table.
 rtk .venv/bin/python -m scripts.check_pooled --run outputs/pooled/prior
 ```
 
-Inspect plausible concentrations and extremes, then save `outputs/pooled/prior_review.json` with an actual review:
+Prior mode generates both baseline and widened-slope prior predictions; the checker renders separate plots for each. Inspect plausible concentrations and extremes, then save `outputs/pooled/prior_review.json` with an actual review:
 
 ```json
 {
   "accepted": false,
   "reviewed_by": "ACTUAL REVIEWER",
   "reviewed_at": "ACTUAL DATE",
+  "reviewed_configurations": ["baseline", "wide-slopes"],
   "prior_sha256": "SHA256 OF PRIOR JSON",
   "prior_run_manifest": "prior/manifest.json",
   "prior_run_manifest_sha256": "SHA256 OF THAT MANIFEST"
 }
 ```
 
-Manifest paths resolve relative to this review JSON unless absolute. Use `scripts.fit_pooled.sha256(Path(...))` or a local SHA-256 utility for hashes. Changed priors, data or metadata require a matching new prior run/review. Do not fabricate an accepted review.
+Manifest paths resolve relative to this review JSON unless absolute. Use `scripts.fit_pooled.sha256(Path(...))` or a local SHA-256 utility for hashes. Changed priors, data or metadata require a matching new prior run/review. Both effective prior configurations and their prediction files are hash-bound to the reviewed manifest. Standard posterior/held-out runs require baseline review; sensitivity requires explicit review of baseline and wide-slopes. Do not fabricate an accepted review or list a configuration that was not inspected.
 
 For explicitly synthetic demonstrations only, `--synthetic` bypasses scientific review; both metadata and priors must contain `"synthetic": true`. Artifacts remain labeled synthetic.
 
@@ -78,7 +82,7 @@ Defaults: 4 sequential chains, 1,000 warmup and 1,000 retained draws per chain, 
 
 ## Held-out comparison handoff
 
-Ayreeen supplies a split CSV with `split_id,date,partition` (`train` or `test`). Each split assigns every available date exactly once, training strictly before test. All stations on a date stay together. For rolling windows that exclude later dates, supply the appropriate finalized input window and matching metadata; unspecified dates are never silently ignored.
+Ayreeen supplies a split CSV with exactly `split_id,date,partition` (`train` or `test`), with no station-specific columns. Each split assigns every available date exactly once, training strictly before test. All stations on a date stay together. `--splits` is rejected in other modes. For rolling windows that exclude later dates, supply the appropriate finalized input window and matching metadata; unspecified dates are never silently ignored.
 
 ```sh
 rtk .venv/bin/python -m scripts.fit_pooled --data data/processed/analysis_table.csv --metadata data/processed/analysis_metadata.json --priors models/pooled_priors.json --prior-review outputs/pooled/prior_review.json --output outputs/pooled/heldout --mode heldout --splits data/processed/model_splits.csv
@@ -91,9 +95,9 @@ The fit receives only training outcomes. Prediction strips test outcomes, reuses
 
 - Root `manifest.json`: input/config hashes, versions, settings, row keys, synthetic label, split mapping and run status. `complete` means execution finished, not that scientific checks passed.
 - `baseline/` and sensitivity `wide-slopes/`: `training.csv`, `transforms.json`, `effective_priors.json`, and `posterior.nc` (posterior, posterior predictive, sample statistics, pointwise log likelihood).
-- Held-out directories `split-000/`, etc., map to original split IDs in the manifest. `predictions.nc` contains `no2(chain,draw,observation)` with `station_id(observation)` and `date(observation)` coordinates; `prediction_keys.csv` provides the same keys. Join models by keys, not array position.
+- Held-out directories `split-000/`, etc., map to original split IDs in the manifest. `predictions.nc` contains `no2(chain,draw,observation)` with `split_id(observation)`, `station_id(observation)` and `date(observation)` coordinates; `prediction_keys.csv` provides the same keys. Join models by keys, not array position. Prior/posterior artifacts also retain station/date coordinates; the checker rejects training CSVs whose keys have changed order.
 - `checks/`: sampling CSV, summary JSON, distribution, station/weekend, tail, trace and residual PNGs, calendar-lag residual correlations, and fitted arithmetic means. Root `weekend_summary.csv` compares baseline/sensitivity summaries.
-- Prior mode saves `prior.nc`, training data, transforms and effective priors; checking creates a separate prior distribution plot.
+- Prior mode saves `prior.nc`, `wide-slopes-prior.nc`, training data, transforms and both effective prior configurations; checking creates separate distribution plots.
 
 Sampling passes only when every scalar parameter has finite diagnostics, rank R-hat ≤ 1.01, bulk/tail ESS ≥ 400, and zero divergences. Failed gates remain visible in summaries. Predictive adequacy always requires reviewing station, weekend, tail and temporal behavior, even if sampling passes.
 

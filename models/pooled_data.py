@@ -10,6 +10,7 @@ import pandas as pd
 FEATURES = ("weekend", "wind", "temperature", "rain", "sin", "cos")
 WEATHER = ("wind_speed", "temperature", "precipitation")
 SCALES = (2.0, 10.0, 1.0)
+WIND_MEASURES = ("daily_mean_speed", "mean_of_hourly_maxima")
 
 
 @dataclass(frozen=True)
@@ -74,6 +75,10 @@ def load_analysis(path: Path, metadata_path: Path) -> pd.DataFrame:
     meta = json.loads(metadata_path.read_text())
     if meta.get("approved") is not True:
         raise ValueError("Data handoff must be approved by its owner")
+    if meta.get("wind_measure") not in WIND_MEASURES:
+        raise ValueError(
+            f"wind_measure must explicitly identify measure and aggregation: {WIND_MEASURES}"
+        )
     for name in (
         "wind_definition",
         "weather_matching",
@@ -83,6 +88,13 @@ def load_analysis(path: Path, metadata_path: Path) -> pd.DataFrame:
     ):
         if not isinstance(meta.get(name), str) or not meta[name].strip():
             raise ValueError(f"Missing handoff metadata: {name}")
+        if (
+            meta[name]
+            .strip()
+            .upper()
+            .startswith(("OWNER TO CONFIRM", "AGREE WITH", "TODO", "PENDING"))
+        ):
+            raise ValueError(f"Unresolved handoff metadata: {name}")
     expected = dict(
         no2_daily="ug/m3", wind_speed="m/s", temperature="degC", precipitation="mm"
     )
@@ -127,10 +139,12 @@ def make_design(
 
 def validate_splits(frame: pd.DataFrame, assignments: pd.DataFrame) -> None:
     if (
-        not {"split_id", "date", "partition"}.issubset(assignments.columns)
+        set(assignments.columns) != {"split_id", "date", "partition"}
         or assignments.empty
     ):
-        raise ValueError("Splits need split_id, date, partition")
+        raise ValueError(
+            "Split columns must be exactly split_id, date, partition; station-specific splits are not supported"
+        )
     a = assignments.copy()
     if a.isna().any().any() or a.duplicated(["split_id", "date"]).any():
         raise ValueError("Missing or duplicate split/date assignments")
