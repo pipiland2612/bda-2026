@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 
 from models.pooled_diagnostics import (
+    compare_fitted_means,
     diagnostic_figures,
     predictive_figures,
     summarize_fit,
@@ -39,28 +40,38 @@ def check_run(run: Path):
     if manifest["status"] != "complete":
         raise ValueError("Only a completed run can be checked")
     label = "SYNTHETIC DEMONSTRATION" if manifest["synthetic"] else "Pooled model"
-    if manifest["mode"] == "prior":
-        frame = pd.read_csv(run / "training.csv", dtype={"station_id": str})
-        for name, filename, output in [
-            ("baseline", "prior.nc", run / "checks"),
-            ("wide-slopes", "wide-slopes-prior.nc", run / "checks" / "wide-slopes"),
-        ]:
-            with closing(az.from_netcdf(run / filename)) as prior:
-                validate_keys(prior.prior_predictive, frame)
-                predictive_figures(
-                    frame,
-                    prior.prior_predictive.no2.values,
-                    output,
-                    label + " " + name,
-                    prior=True,
-                )
-        write_json(
-            run / "checks" / "summary.json",
-            dict(
-                synthetic=manifest["synthetic"],
-                prior_predictive_review="Required; inspect plausible concentrations and extremes",
-            ),
+    if manifest["mode"] in ("prior", "prior-heldout"):
+        folders = (
+            [(run / s["directory"], str(s["split_id"])) for s in manifest["splits"]]
+            if manifest["mode"] == "prior-heldout"
+            else [(run, "")]
         )
+        for folder, split_label in folders:
+            frame = pd.read_csv(folder / "training.csv", dtype={"station_id": str})
+            for name, filename, output in [
+                ("baseline", "prior.nc", folder / "checks"),
+                (
+                    "wide-slopes",
+                    "wide-slopes-prior.nc",
+                    folder / "checks" / "wide-slopes",
+                ),
+            ]:
+                with closing(az.from_netcdf(folder / filename)) as prior:
+                    validate_keys(prior.prior_predictive, frame)
+                    predictive_figures(
+                        frame,
+                        prior.prior_predictive.no2.values,
+                        output,
+                        " ".join(filter(None, [label, split_label, name])),
+                        prior=True,
+                    )
+            write_json(
+                folder / "checks" / "summary.json",
+                dict(
+                    synthetic=manifest["synthetic"],
+                    prior_predictive_review="Required; inspect plausible concentrations and extremes",
+                ),
+            )
         return
     directories = (
         [s["directory"] for s in manifest["splits"]]
@@ -97,6 +108,16 @@ def check_run(run: Path):
                 )
             )
     pd.DataFrame(summaries).to_csv(run / "weekend_summary.csv", index=False)
+    if manifest["mode"] == "sensitivity":
+        baseline, wide = [
+            pd.read_csv(
+                run / name / "checks" / "fitted_means.csv", dtype={"station_id": str}
+            )
+            for name in ("baseline", "wide-slopes")
+        ]
+        compare_fitted_means(baseline, wide).to_csv(
+            run / "fitted_mean_comparison.csv", index=False
+        )
     print(
         f"Checks saved under {run}; sampling gates do not establish predictive adequacy"
     )

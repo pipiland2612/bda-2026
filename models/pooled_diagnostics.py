@@ -57,6 +57,37 @@ def lognormal_mean(eta, sigma):
     return np.exp(np.asarray(eta) + np.asarray(sigma) ** 2 / 2)
 
 
+def compare_fitted_means(baseline: pd.DataFrame, wide: pd.DataFrame) -> pd.DataFrame:
+    """Compare the two pooled prior settings at identical station/day rows."""
+    keys = ["station_id", "date"]
+    tables = []
+    for frame, column in (
+        (baseline, "baseline_fitted_mean"),
+        (wide, "wide_slopes_fitted_mean"),
+    ):
+        if not {*keys, "fitted_mean"}.issubset(frame.columns):
+            raise ValueError("Fitted means require station_id, date and fitted_mean")
+        if frame[keys].isna().any().any() or frame.duplicated(keys).any():
+            raise ValueError("Fitted means require unique nonmissing station/date keys")
+        values = frame.fitted_mean.to_numpy(dtype=float)
+        if not np.isfinite(values).all():
+            raise ValueError("Fitted means must be finite")
+        tables.append(frame[keys].assign(**{column: values}))
+    result = tables[0].merge(
+        tables[1],
+        on=keys,
+        how="left",
+        sort=False,
+        validate="one_to_one",
+        indicator=True,
+    )
+    if len(tables[0]) != len(tables[1]) or not result._merge.eq("both").all():
+        raise ValueError("Fitted mean station/date keys do not match")
+    result = result.drop(columns="_merge")
+    result["difference"] = result.wide_slopes_fitted_mean - result.baseline_fitted_mean
+    return result
+
+
 def residual_lags(
     keys: pd.DataFrame, residuals: np.ndarray, max_lag_days: int = 14
 ) -> pd.DataFrame:

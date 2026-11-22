@@ -277,3 +277,184 @@ def test_cli_sensitivity_doubles_only_slope_scales(tmp_path):
     np.testing.assert_allclose(wide["beta_sds"], np.array(base["beta_sds"]) * 2)
     for key in ["alpha_mean", "alpha_sd", "sigma_scale", "beta_means"]:
         assert wide[key] == base[key]
+    with pytest.warns(UserWarning, match="Small predictive-check group"):
+        check_run(tmp_path / "run")
+    comparison = pd.read_csv(tmp_path / "run" / "fitted_mean_comparison.csv")
+    assert comparison.columns.tolist() == [
+        "station_id",
+        "date",
+        "baseline_fitted_mean",
+        "wide_slopes_fitted_mean",
+        "difference",
+    ]
+    assert comparison[["station_id", "date"]].values.tolist() == [
+        ["a", "2024-01-01"],
+        ["a", "2024-01-06"],
+        ["b", "2024-01-01"],
+        ["b", "2024-01-06"],
+    ]
+    np.testing.assert_allclose(
+        comparison.difference,
+        comparison.wide_slopes_fitted_mean - comparison.baseline_fitted_mean,
+    )
+
+
+def write_splits(path):
+    pd.DataFrame(
+        dict(
+            split_id=["s", "s"],
+            date=["2024-01-01", "2024-01-06"],
+            partition=["train", "test"],
+        )
+    ).to_csv(path, index=False)
+
+
+def write_review(tmp_path, prior_run="run", **extra):
+    manifest = tmp_path / prior_run / "manifest.json"
+    review = tmp_path / "review.json"
+    record = dict(
+        accepted=True,
+        reviewed_by="test fixture",
+        reviewed_at="2026-11-21",
+        prior_sha256=sha256(tmp_path / "priors.json"),
+        prior_run_manifest=str(manifest),
+        prior_run_manifest_sha256=sha256(manifest),
+        reviewed_configurations=["baseline"],
+        **extra,
+    )
+    review.write_text(json.dumps(record))
+    return review
+
+
+def test_production_heldout_rejects_full_data_prior_review(tmp_path):
+    args = inputs(tmp_path, synthetic=False)
+    main(args + ["--mode", "prior", "--draws", "5"])
+    review = write_review(tmp_path)
+    splits = tmp_path / "splits.csv"
+    write_splits(splits)
+    args[args.index("--output") + 1] = str(tmp_path / "heldout")
+    with pytest.raises(ValueError, match="prior-heldout"):
+        main(
+            args
+            + [
+                "--mode",
+                "heldout",
+                "--splits",
+                str(splits),
+                "--prior-review",
+                str(review),
+                "--chains",
+                "1",
+                "--warmup",
+                "10",
+                "--draws",
+                "10",
+            ]
+        )
+    assert not (tmp_path / "heldout").exists()
+
+
+def test_prior_heldout_review_binds_each_training_design_and_split(tmp_path):
+    args = inputs(tmp_path, synthetic=False)
+    splits = tmp_path / "splits.csv"
+    write_splits(splits)
+    main(args + ["--mode", "prior-heldout", "--splits", str(splits), "--draws", "5"])
+    manifest_path = tmp_path / "run" / "manifest.json"
+    original_manifest = manifest_path.read_text()
+    manifest = json.loads(original_manifest)
+    entry = manifest["splits"][0]
+    assert entry["split_id"] == "s"
+    assert entry["keys"] == [["a", "2024-01-01"], ["b", "2024-01-01"]]
+    folder = tmp_path / "run" / entry["directory"]
+    state = json.loads((folder / "transforms.json").read_text())
+    assert state["centers"] == [2.0, 0.0, 0.0]
+    with xr.open_dataset(folder / "prior.nc", group="prior_predictive") as prior:
+        assert prior.date.values.tolist() == ["2024-01-01"] * 2
+    review = write_review(tmp_path, reviewed_splits={"s": ["baseline"]})
+    data, meta, priors = [
+        tmp_path / name for name in ("data.csv", "metadata.json", "priors.json")
+    ]
+    verify_review(review, priors, data, meta, splits=splits)
+    with pytest.raises(ValueError, match="wide-slopes"):
+        verify_review(
+            review, priors, data, meta, ("baseline", "wide-slopes"), splits=splits
+        )
+    write_review(tmp_path, reviewed_splits={"s": ["baseline", "wide-slopes"]})
+    verify_review(
+        review, priors, data, meta, ("baseline", "wide-slopes"), splits=splits
+    )
+    write_review(tmp_path, reviewed_splits={})
+    with pytest.raises(ValueError, match="baseline"):
+        verify_review(review, priors, data, meta, splits=splits)
+    write_review(tmp_path, reviewed_splits={"s": ["baseline"]})
+    original_splits = splits.read_text()
+    splits.write_text(original_splits.replace("s,", "changed,"))
+    with pytest.raises(ValueError, match="split"):
+        verify_review(review, priors, data, meta, splits=splits)
+    splits.write_text(original_splits)
+    for field, bad, message in [
+        ("keys", [], "keys"),
+        ("transforms_sha256", "wrong", "transform"),
+        ("prior_configurations", {}, "effective configuration"),
+    ]:
+        changed = json.loads(original_manifest)
+        changed["splits"][0][field] = bad
+        manifest_path.write_text(json.dumps(changed))
+        write_review(tmp_path, reviewed_splits={"s": ["baseline"]})
+        with pytest.raises(ValueError, match=message):
+            verify_review(review, priors, data, meta, splits=splits)
+    manifest_path.write_text(original_manifest)
+    write_review(tmp_path, reviewed_splits={"s": ["baseline"]})
+    original_transforms = (folder / "transforms.json").read_text()
+    (folder / "transforms.json").write_text(original_transforms + "\n")
+    with pytest.raises(ValueError, match="transform"):
+        verify_review(review, priors, data, meta, splits=splits)
+    (folder / "transforms.json").write_text(original_transforms)
+    (folder / "prior.nc").write_bytes(b"changed draws")
+    with pytest.raises(ValueError, match="predictions changed"):
+        verify_review(review, priors, data, meta, splits=splits)
+
+
+def test_prior_heldout_training_design_does_not_use_test_weather(tmp_path):
+    args = inputs(tmp_path)
+    splits = tmp_path / "splits.csv"
+    write_splits(splits)
+    extra = [
+        "--mode",
+        "prior-heldout",
+        "--splits",
+        str(splits),
+        "--synthetic",
+        "--draws",
+        "5",
+    ]
+    first = main(args + extra)
+    data_path = tmp_path / "data.csv"
+    f = pd.read_csv(data_path)
+    f.loc[f.date.eq("2024-01-06"), ["wind_speed", "temperature", "precipitation"]] = [
+        100.0,
+        90.0,
+        80.0,
+    ]
+    f.to_csv(data_path, index=False)
+    args[args.index("--output") + 1] = str(tmp_path / "changed-test")
+    second = main(args + extra)
+    assert first["data_sha256"] != second["data_sha256"]
+    for filename in ["transforms.json", "training.csv"]:
+        assert (tmp_path / "run" / "split-000" / filename).read_bytes() == (
+            tmp_path / "changed-test" / "split-000" / filename
+        ).read_bytes()
+    with (
+        xr.open_dataset(
+            tmp_path / "run" / "split-000" / "prior.nc", group="prior"
+        ) as original,
+        xr.open_dataset(
+            tmp_path / "changed-test" / "split-000" / "prior.nc", group="prior"
+        ) as changed,
+    ):
+        np.testing.assert_array_equal(original.eta.values, changed.eta.values)
+
+
+def test_prior_heldout_requires_owner_splits(tmp_path):
+    with pytest.raises(ValueError, match="--splits"):
+        main(inputs(tmp_path) + ["--mode", "prior-heldout", "--synthetic"])
