@@ -1,0 +1,17 @@
+station,season,valid_days,mean_daily_no2_ug_m3
+Espoo Leppävaara Läkkisepänkuja,winter,91,17.4387
+Espoo Leppävaara Läkkisepänkuja,spring,92,13.9411
+Espoo Leppävaara Läkkisepänkuja,summer,92,8.4703
+Espoo Leppävaara Läkkisepänkuja,autumn,90,12.9249
+Helsinki Kallio 2,winter,78,14.1387
+Helsinki Kallio 2,spring,92,10.7191
+Helsinki Kallio 2,summer,92,6.9959
+Helsinki Kallio 2,autumn,91,8.7355
+Helsinki Mäkelänkatu,winter,89,22.1055
+Helsinki Mäkelänkatu,spring,92,18.6834
+Helsinki Mäkelänkatu,summer,92,14.2337
+Helsinki Mäkelänkatu,autumn,91,17.9381
+Vantaa Tikkurila Neilikkatie,winter,91,17.3389
+Vantaa Tikkurila Neilikkatie,spring,92,13.5901
+Vantaa Tikkurila Neilikkatie,summer,92,9.4543
+Vantaa Tikkurila Neilikkatie,autumn,87,12.9498

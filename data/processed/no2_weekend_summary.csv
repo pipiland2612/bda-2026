@@ -1,0 +1,5 @@
+station,daily_coverage_rule,valid_days,weekday_days,weekday_mean_ug_m3,weekend_days,weekend_mean_ug_m3,weekend_minus_weekday_ug_m3
+Espoo Leppävaara Läkkisepänkuja,at least 75% of expected local hourly slots,365,261,13.9737,104,11.2008,-2.7729
+Helsinki Kallio 2,at least 75% of expected local hourly slots,353,251,10.5669,102,8.5808,-1.9861
+Helsinki Mäkelänkatu,at least 75% of expected local hourly slots,364,260,19.675,104,14.5444,-5.1306
+Vantaa Tikkurila Neilikkatie,at least 75% of expected local hourly slots,362,260,14.2065,102,11.087,-3.1194

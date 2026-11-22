@@ -1,0 +1,13 @@
+station,minimum_daily_coverage_pct,valid_days,weekday_days,weekday_mean_ug_m3,weekend_days,weekend_mean_ug_m3,weekend_minus_weekday_ug_m3
+Espoo Leppävaara Läkkisepänkuja,75,365,261,13.9737,104,11.2008,-2.7729
+Espoo Leppävaara Läkkisepänkuja,90,364,260,13.9855,104,11.2008,-2.7847
+Espoo Leppävaara Läkkisepänkuja,100,347,244,13.8818,103,11.2195,-2.6623
+Helsinki Kallio 2,75,353,251,10.5669,102,8.5808,-1.9861
+Helsinki Kallio 2,90,352,250,10.5821,102,8.5808,-2.0013
+Helsinki Kallio 2,100,338,237,10.4807,101,8.5923,-1.8884
+Helsinki Mäkelänkatu,75,364,260,19.675,104,14.5444,-5.1306
+Helsinki Mäkelänkatu,90,363,259,19.6232,104,14.5444,-5.0788
+Helsinki Mäkelänkatu,100,344,241,19.8215,103,14.5469,-5.2745
+Vantaa Tikkurila Neilikkatie,75,362,260,14.2065,102,11.087,-3.1194
+Vantaa Tikkurila Neilikkatie,90,360,258,14.2141,102,11.087,-3.1271
+Vantaa Tikkurila Neilikkatie,100,345,244,14.1348,101,11.0979,-3.0369

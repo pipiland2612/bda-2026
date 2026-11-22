@@ -1,0 +1,5 @@
+station_id,station_name,environment,start_date,end_date,total_days,usable_days,missing_days,non_positive_hours,weather_station_id
+100762,Helsinki Mäkelänkatu,Urban traffic,2024-01-01,2024-12-31,366,364,2,0,101004
+100662,Helsinki Kallio 2,Urban background,2024-01-01,2024-12-31,366,353,13,4,100971
+100691,Espoo Leppävaara Läkkisepänkuja,Urban traffic,2024-01-01,2024-12-31,366,365,1,4,100971
+100763,Vantaa Tikkurila Neilikkatie,Urban traffic,2024-01-01,2024-12-31,366,362,4,1,100968

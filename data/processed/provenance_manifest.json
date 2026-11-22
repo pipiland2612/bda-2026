@@ -1,0 +1,70 @@
+{
+  "generated_at_utc": "2026-11-22T17:16:23.119838+00:00",
+  "provider": "Finnish Meteorological Institute (FMI) / HSY Air Quality Monitoring",
+  "source_url": "https://ilmatieteenlaitos.fi",
+  "license": "CC BY 4.0 (https://ilmatieteenlaitos.fi)",
+  "query_parameters": {
+    "start_date": "2024-01-01",
+    "end_date": "2024-12-31",
+    "timezone": "Europe/Helsinki (Local time)",
+    "resolution": "1 hour"
+  },
+  "files": [
+    {
+      "category": "air_quality",
+      "fmisid": "100762",
+      "station_name": "Helsinki Mäkelänkatu",
+      "filename": "Helsinki Mäkelänkatu_ 1.1.2024 - 31.12.2024_48ee77b9-d804-4e3b-a0e2-dd8c5a8782d5.csv",
+      "sha256": "33816de1e89225ce3cb4c837e83f6855b257c9a829e3a6e727d4b8d179448d92",
+      "size_bytes": 494454
+    },
+    {
+      "category": "air_quality",
+      "fmisid": "100662",
+      "station_name": "Helsinki Kallio 2",
+      "filename": "Helsinki Kallio 2_ 1.1.2024 - 31.12.2024_80609b8b-f3aa-4e8c-bfbb-66f8d7cf2010.csv",
+      "sha256": "2203ee0a87bdef75e368fa47ef6a935f60c2a35e05ca2b45b194ba9164f8426e",
+      "size_bytes": 448342
+    },
+    {
+      "category": "air_quality",
+      "fmisid": "100691",
+      "station_name": "Espoo Leppävaara Läkkisepänkuja",
+      "filename": "Espoo Leppävaara Läkkisepänkuja_ 1.1.2024 - 31.12.2024_1b316b47-3cf3-44e2-9c22-7dd8dfaaa7fd.csv",
+      "sha256": "8ee1e4101e09ad3a64f1e252fd17e1e473ae2818243bd503c0f4049725a75a5d",
+      "size_bytes": 599276
+    },
+    {
+      "category": "air_quality",
+      "fmisid": "100763",
+      "station_name": "Vantaa Tikkurila Neilikkatie",
+      "filename": "Vantaa Tikkurila Neilikkatie_ 1.1.2024 - 31.12.2024_4d73082a-f003-47c1-bbbc-121395434ef0.csv",
+      "sha256": "f92667ea3fcd7bb11b857ad8d6913bc510f41e6c0b06f8243bc3bc4b39d1c44d",
+      "size_bytes": 546747
+    },
+    {
+      "category": "weather",
+      "fmisid": "100971",
+      "station_name": "Helsinki Kaisaniemi",
+      "filename": "Helsinki Kaisaniemi_ 1.1.2024 - 31.12.2024_e85ace4e-83be-4d3d-b916-7806d99c6b2d.csv",
+      "sha256": "2db7e6618b2f2791101c4ddac0d2286baad863b96a041e99dda86ed08cad5a63",
+      "size_bytes": 557302
+    },
+    {
+      "category": "weather",
+      "fmisid": "101004",
+      "station_name": "Helsinki Kumpula",
+      "filename": "Helsinki Kumpula_ 1.1.2024 - 31.12.2024_51f3ca23-ed4c-43f5-8359-1a77c3e3921f.csv",
+      "sha256": "d14a043b6029ed378c25a1a273bb80c01d8d4d161f589c4d4b2d16b5e014a519",
+      "size_bytes": 530827
+    },
+    {
+      "category": "weather",
+      "fmisid": "100968",
+      "station_name": "Helsinki-Vantaa airport",
+      "filename": "Helsinki-Vantaa airport_ 1.1.2024 - 31.12.2024_1d9b9e1b-b19a-41cc-a5a2-1bde6a20b6ca.csv",
+      "sha256": "75aa708c849f4c0f1e43172a223c8d8457aecc0d62774ca110db30b0e733d856",
+      "size_bytes": 593073
+    }
+  ]
+}
