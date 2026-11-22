@@ -26,8 +26,13 @@ Start with [FMI Download observations](https://en.ilmatieteenlaitos.fi/download-
 1. **Confirm data coverage** and finalize the stations and study period.
 2. **Prepare daily observations:** apply quality checks, align weather and pollution timestamps, and document missing-data rules.
 3. **Explore patterns:** compare weekdays and weekends, seasons, and stations.
+   Run `python3 scripts/prepare_explore.py` followed by
+   `python3 scripts/plot_explore.py` to generate descriptive summaries and
+   figures in `data/processed/` and `reports/figures/`.
 4. **Choose informed priors:** express plausible concentration changes for weather and weekend predictors, then check simulated predictions. See the [prior plan](docs/prior-plan.md).
 5. **Fit two Bayesian models:** a pooled regression and a hierarchical regression with station-specific intercepts and weekend effects.
 6. **Check both models:** inspect convergence, posterior predictions, and residual temporal patterns; assess sensitivity to prior choices.
 7. **Compare predictions on held-out time periods**, keeping all stations on the same dates together.
 8. **Write the report:** explain the weekend patterns, uncertainty, limitations, and what the group learned.
+
+Install the Python dependencies with `python3 -m pip install -r requirements.txt`.

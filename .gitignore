@@ -1,7 +1,6 @@
 # Local data and generated analysis artifacts
 !data/raw/.gitkeep
 !data/processed/.gitkeep
-reports/figures/*
 !reports/figures/.gitkeep
 *.rds
 *.RData
