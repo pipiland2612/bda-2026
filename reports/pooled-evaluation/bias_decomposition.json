@@ -1,0 +1,10 @@
+{
+  "mse": 58.225773823550256,
+  "stationwise_bias_mse": 27.37201443484729,
+  "stationwise_bias_share": 0.47010134236766954,
+  "overall_bias": 3.816314366038656,
+  "warning": "Uses test errors only to diagnose bias; this is not a deployable correction or validation score.",
+  "overall_bias_share": 0.2501341654053261,
+  "additional_between_station_bias_share": 0.2199671769623434,
+  "clarification": "47% stationwise bias includes about 25% common bias plus 22% additional between-station bias; not all 47% is attributable to missing station effects."
+}

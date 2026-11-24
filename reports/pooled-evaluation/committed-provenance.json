@@ -1,0 +1,17 @@
+{
+  "synthetic": false,
+  "status": "Exploratory fit of the committed table; no group approval claimed",
+  "source": "data/processed/step3_analysis_table.csv",
+  "source_sha256": "617097f629b0f16a5f0a22b2fa2cc0a9b84ef20a361e4795c7863c883663b50f",
+  "rows_before": 1464,
+  "rows_retained": 1441,
+  "excluded": 23,
+  "assumptions": [
+    "Keep usable_day=True, positive NO2, finite outcome and all three weather covariates; no imputation.",
+    "Preserve committed date assignments and values exactly; no previous-hour reconstruction.",
+    "Do not reinterpret supplied wind maxima as ordinary mean wind.",
+    "Provider validity, weather coverage, timestamp and precipitation semantics are not approved by this diagnostic.",
+    "Numerical priors are provisional analyst assumptions; production approval gates remain unchanged."
+  ],
+  "holdout": "Train before 2024-10-01; test October\u2013December, grouped by date. Reused development window."
+}

@@ -4,6 +4,14 @@ Minh owns Model A, the pooled lognormal regression implemented here. Andrei owns
 
 See the [approved design](../docs/superpowers/specs/2026-11-21-minh-pooled-model-design.md) and [Minh's explanation](../reports/minh-pooled-model.md).
 
+## Current evidence
+
+The software and exploratory real-data evaluation are complete. [Minh's report](../reports/minh-pooled-model.md) contains actual sampling, weekend-association, prior-sensitivity and predictive results. The fully pooled model is a useful benchmark but predicts the examined winter block poorly.
+
+Two cohorts are explicitly distinguished: the latest committed `step3_analysis_table.csv` filtered to 1,441 usable, positive, complete rows, and a separately reconstructed 1,440-row cohort used for earlier ablations. Their values/date aggregation differ; their results must not be mixed. [Reproduction commands](../analysis/pooled/README.md) and [compact evidence](../reports/pooled-evaluation/README.md) are tracked; generated posterior draws remain under ignored `outputs/pooled/`.
+
+These are real observations with provisional preparation/priors, not synthetic demonstrations or an approved final team comparison. Group approval of metadata, numerical priors and shared validation dates remains a scientific handoff. The production commands below preserve that distinction.
+
 ## Setup
 
 Run from the repository root. Tested with Python 3.13 on macOS arm64; the lock records that exact environment. On another platform resolve `requirements-model.txt` and record the resulting versions. Keep PyMC 5.x and ArviZ below 1 for this saved-data contract.
@@ -11,7 +19,7 @@ Run from the repository root. Tested with Python 3.13 on macOS arm64; the lock r
 ```sh
 rtk python3 -m venv .venv
 rtk .venv/bin/python -m pip install -r requirements-model.lock.txt
-rtk .venv/bin/python -m pytest -q
+rtk .venv/bin/python -m pytest tests/ -q
 ```
 
 ## Data handoff
@@ -125,4 +133,4 @@ The fit receives only training outcomes. Prediction strips test outcomes, reuses
 
 Sampling passes only when every scalar parameter has finite diagnostics, rank R-hat ≤ 1.01, bulk/tail ESS ≥ 400, and zero divergences. Failed gates remain visible in summaries. Predictive adequacy always requires reviewing station, weekend, tail and temporal behavior, even if sampling passes.
 
-Production results are pending the verified shared data, numerical priors and prior review, and agreed held-out dates. Existing preprocessing scripts remain unchanged.
+For the final team comparison, record the actual shared data/metadata agreement, numerical priors, prior review and common held-out dates before using the production workflow. Completed exploratory results and their separate cohorts are documented above. Existing preprocessing scripts remain unchanged.

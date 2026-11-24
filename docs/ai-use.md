@@ -1,5 +1,7 @@
 # AI-use log
 
+Entries describe the status on their stated dates. The 24 November entry and [Minh's report](../reports/minh-pooled-model.md) include the subsequently completed real-data exploration.
+
 | Date | Tool | Assistance | Verification / responsibility |
 | --- | --- | --- | --- |
 | 2026-11-08 | Codex | Official-source discovery, repository scaffold, project/prior planning notes | Group must verify sources, availability, and modelling suggestions; no analysis performed |
@@ -9,3 +11,4 @@ Update this log when using AI again and adapt the report disclosure accordingly.
 | 2026-11-08 | Codex | Expanded the problem, candidate dataset, and Bayesian workflow into a detailed planning document | Group to verify station coverage and approve modelling decisions; no data analysis performed |
 | 2026-11-21 | Codex | Read updated assignments; planned and implemented Minh's pooled model, data checks, prediction exports, diagnostics, tests and methods/presentation notes; exercised software with explicitly synthetic data | Minh approved the design and plan. Source validation, numeric prior elicitation, scientific review, real-data fitting and comparison remain pending; synthetic output is not a Helsinki finding. |
 | 2026-11-22 | Codex with three parallel agents | Independently reviewed statistical correctness, CLI/data integrity and reproducibility; added split-specific prior-review checks, a keyed prior-sensitivity comparison table, and dependency/documentation corrections; prepared a pull request | Regression tests and synthetic checks verify software behavior. Verified shared data, agreed numerical priors, real-data fitting and scientific interpretation remain pending the group handoff. |
+| 2026-11-24 | Codex with independent reviewers | Published real-data exploratory fitting, prior sensitivity, prediction metrics and bottleneck ablations; checked the latest committed preprocessing table separately; corrected stale status text and added portable reproduction scripts plus compact evidence | Reproduced earlier baseline results exactly in the tested environment. Latest-table cohort is 1441 rows; earlier reconstructed cohort is 1440 and has different daily values. Priors remain explicitly unapproved, all examined windows are development evidence, and source/metadata agreement plus final scientific interpretation remain the group's responsibility. Production Model A and teammates' implementations were preserved. |

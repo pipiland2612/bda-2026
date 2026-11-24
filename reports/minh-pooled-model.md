@@ -1,12 +1,12 @@
 # Minh's pooled model: report and presentation notes
 
-Status: implementation exercised using synthetic data. Real Helsinki results are pending finalized shared data and approved priors. Do not use demonstration estimates as project findings.
+The pooled benchmark is implemented and evaluated on real 2024 observations. Sampling is reliable, but winter prediction is weak. These results are exploratory: numerical priors, source semantics and the final shared comparison have not been approved by the group.
 
 ## My technical contribution
 
-I fit the pooled benchmark: is weekend status associated with daily NO₂ after adjustment for the agreed wind measure, temperature, rainfall and annual seasonality? Every station shares one intercept and common effects. Andrei's hierarchical model can assess what changes when station differences are modeled explicitly.
+I fit Model A to ask whether weekend status is associated with daily NO₂ after adjustment for wind, temperature, rainfall and annual seasonality. Every station shares one intercept and common effects. Andrei owns Model B, which can represent station differences; Ayreeen owns preprocessing and the final comparison. Each person explains their own technical work in the report and presentation.
 
-## Model and variables
+## Model and preparation
 
 For station-day i:
 
@@ -14,41 +14,73 @@ For station-day i:
 
 `eta_i = alpha + beta_weekend*weekend_i + beta_wind*wind_i + beta_temperature*temperature_i + beta_rain*rain_i + beta_sin*sin_i + beta_cos*cos_i`.
 
-This likelihood requires positive concentrations; nonpositive measurements need a documented group decision, not an arbitrary log offset. Weekends are Saturday/Sunday in finalized Helsinki dates. Wind increments are 2 m/s, temperature 10°C, rainfall 1 mm. Continuous predictors use training-only centers, reused for held-out predictions. Annual sine/cosine terms have a 366-day period for 2024. The final wind definition remains to be confirmed because the raw files contain maximum rather than mean wind speed.
+The model requires positive daily concentrations. Weekends are Saturday/Sunday. Wind is scaled per 2 m/s, temperature per 10°C and daily rainfall per 1 mm; continuous variables use training-only centers. Annual sine/cosine terms have a 366-day period for 2024. Arithmetic mean predictions use `exp(eta + sigma²/2)`.
 
-## Priors, fitting and checks
+The latest committed `data/processed/step3_analysis_table.csv`, as present at main commit `82ba18b`, contains 1,464 station-days. The diagnostic keeps `usable_day=True`, positive NO₂ and finite values for all model inputs: **1,441 rows**, comprising Kallio 353, Leppävaara 365, Mäkelänkatu 364 and Tikkurila 359. It preserves supplied dates and measurements exactly, with no imputation. This selection does not independently validate the preprocessing.
 
-Use an explicit Normal prior on alpha and each slope, with slope parameters derived from plausible concentration-ratio ranges. Use an explicit HalfNormal residual sigma prior. Numerical values and scientific justifications await group elicitation; software defaults and the planning worksheet's illustrative wind range are not scientific evidence.
+Earlier investigations used a **separately reconstructed 1,440-row cohort**, shifting hourly end labels back one hour before assigning Helsinki dates, consistent with [FMI's observation guidance](https://en.ilmatieteenlaitos.fi/guidance-to-observations). This produces different daily values and exclusions. The ablations below apply to that earlier cohort, not the latest committed table. Both versions use the daily mean of supplied hourly **maximum** wind measurements, not ordinary mean wind speed. The discrepancy in date aggregation is recorded for the preprocessing owner; teammates' source files are preserved.
 
-First simulate prior predictions and review plausible concentrations/extremes across weather and seasonal contexts. Record any changes before posterior fitting. Initial fitting settings are 4 chains, 1,000 warmup and 1,000 retained draws each, seed 20261121, target acceptance 0.9. Actual settings and dependency versions are saved.
+## Provisional priors and prior checks
 
-Check rank R-hat, bulk/tail ESS, Monte Carlo error, divergences and traces. The software flags R-hat > 1.01, ESS < 400, undefined diagnostics or any divergence. Then compare observed and replicated distributions, tails, station means and weekend patterns; examine residual time plots and correlations at actual day gaps.
+Numerical choices are analyst assumptions recorded in [baseline-priors.json](pooled-evaluation/baseline-priors.json), with `approved:false`:
 
-Good sampling means the algorithm explored the specified posterior reliably. It does not establish that the model fits the science: pooling may miss station differences or shared pollution episodes. Repeat fitting with doubled slope prior SDs and compare estimates, uncertainty and predictive behavior.
+- Intercept: Normal(log(20), 0.75); residual sigma: HalfNormal(0.5).
+- Central 95% concentration-ratio ranges: weekend [0.5, 2], wind [0.5, 1.5], temperature [0.5, 2], rainfall [0.9, 1.1], each seasonal coefficient [0.25, 4]. These ranges determine Normal slope means/SDs using the project's ratio conversion.
+- Prior predictive simulation on the committed-table training design gives a median around 20.2, 99th percentile 372.7 and 99.9th percentile 1,079.6 µg/m³. The upper tail is broad and needs scientific review; it is not marked accepted.
 
-## Interpreting the weekend coefficient
+The exploratory scripts call the model API with provisional priors explicitly allowed. They never mark real data synthetic or fabricate approval. The production CLI still requires the actual data/prior review records described in [models/README.md](../models/README.md).
 
-`exp(beta_weekend)` is the conditional median concentration ratio, holding weather and season fixed. A hypothetical ratio of 0.8 would mean a 20% lower conditional median; this is an illustration, not a project estimate.
+## Actual fitting and weekend association
 
-Report the posterior ratio and 95% credible interval, percentage difference `100*(exp(beta_weekend)-1)`, and probability `P(beta_weekend < 0)`, computed from draws. Arithmetic mean predictions are `exp(eta + sigma²/2)`, not `exp(eta)`.
+Fits use four chains, 1,000 warmup and 1,000 retained draws per chain, target acceptance 0.9 and seed 20261122. The full committed-cohort fit has zero divergences, worst rank R-hat **1.0029**, minimum bulk ESS **2,483** and minimum tail ESS **2,499**. The training-only and widened-prior fits also pass all configured sampling checks.
 
-The association is not a causal traffic effect: weekend status does not measure traffic directly. This pooled model also cannot estimate differences in weekend effects between stations.
+On the full committed cohort, the posterior median of `exp(beta_weekend)` is **0.704**, with 95% credible interval **[0.666, 0.740]**: approximately **29.6% lower** conditional median concentration on weekends. All 4,000 retained draws have a negative weekend coefficient; that Monte Carlo fraction does not prove a probability of exactly one.
 
-## Results pending the verified run
+Doubling all six slope prior SDs gives ratio **0.702 [0.666, 0.740]**, a small change. The separately reconstructed cohort gives baseline **0.700 [0.666, 0.736]** and widened-prior **0.699 [0.663, 0.735]**.
 
-- Final rows, station coverage, exclusions and wind definition: awaiting Ayreeen's handoff.
-- Numerical priors and prior predictive review: pending.
-- Sampling diagnostics, model revisions and posterior checks: pending actual fit.
-- Weekend ratio, interval, percentage difference and posterior probability: pending actual fit.
-- Sensitivity findings: pending actual fits.
-- Held-out draws: supply on agreed splits for Ayreeen's comparative analysis.
+These are associations conditional on the specified model, not causal traffic effects. The pooled model cannot estimate station-specific weekend effects. Residual dependence and predictive failures below also mean that numerical stability under prior widening does not establish calibrated scientific uncertainty.
+
+## Prediction on the committed table
+
+Train before 1 October 2024: **1,091 rows**. Evaluate October–December: **350 rows**, keeping all stations on a date together. Predictions condition on observed same-day weather. Q4 has already been used during investigation, so these are development diagnostics rather than an independent final test.
+
+| Point prediction | MAE (µg/m³) | RMSE (µg/m³) |
+| --- | ---: | ---: |
+| Pooled Bayesian arithmetic mean | 6.04 | 7.63 |
+| Global training mean | 5.88 | 7.19 |
+| Station-specific training mean | 5.05 | 6.50 |
+
+The pooled model underperforms both simple baselines. Its nominal 95% predictive intervals cover **90.3%** of test observations, with mean width **30.49 µg/m³** and mean log predictive density **−3.307**. Kallio is particularly poor: RMSE **10.19**, MAE **9.05**, coverage **74.1%**. Passing MCMC checks does not fix this predictive mismatch.
+
+![Committed-table predictive check](figures/minh-pooled-evaluation.png)
+
+## Bottlenecks tested on the reconstructed cohort
+
+The earlier cohort has 1,091 training and 349 Q4 rows. Its original pooled RMSE is 7.63, confirming that the latest-table result is not an isolated sampling failure. Four expanding monthly folds for June–September contain 488 validation station-days; transformations are always fitted on training dates.
+
+| Bayesian diagnostic | June–September RMSE | Reused Q4 RMSE |
+| --- | ---: | ---: |
+| Original pooled model | 5.32 | 7.63 |
+| Pooled, regularized seasonal terms | 5.05 | 6.59 |
+| Station offsets + regularized seasonal terms | 4.00 | 5.97 |
+| Pooled, annual terms removed | 5.02 | 5.97 |
+
+All 20 ablation fits pass the configured sampling checks. Regularization changes seasonal Normal SDs from approximately 0.707 to 0.05. Station offsets use fixed Normal(0, 0.5) priors; this is a diagnostic experiment, not Andrei's hierarchical model. The station-offset/regularized version improves aggregate RMSE by 24.9% on earlier folds and 21.7% on reused Q4, improving each earlier monthly fold.
+
+The main limitations are structural:
+
+- **Station baselines:** Kallio and Leppävaara share weather inputs, so this fully pooled equation must give identical predictions on paired dates despite differing pollution levels.
+- **Seasonal extrapolation:** training temperature and annual cosine correlate about −0.887. Their separate effects are difficult to extrapolate from part of one annual cycle. Shrinkage helps aggregate scores but does not establish a scientifically correct prior.
+- **Time dependence:** even the station-offset/regularized experiment retains training one-day residual correlations around 0.42–0.56. More MCMC draws cannot repair omitted temporal structure.
+
+These experiments explain the benchmark's weakness and give concrete evidence for the team's station-aware comparison. They do not justify selecting a final model solely on already examined windows. Final data semantics, prior elicitation and common splits still require the actual team decision; all investigated windows are development evidence.
 
 ## My presentation
 
-1. Explain the pooled benchmark and equation in plain language.
-2. Explain the priors and prior predictive checks.
-3. Present the checked weekend estimate and uncertainty when available.
-4. Show one diagnostic/predictive figure and explain what it reveals.
-5. Explain pooling/temporal limitations, then hand over to the hierarchical-model and comparison sections.
+1. Explain the pooled equation and shared station assumptions.
+2. Show the provisional priors and the broad prior-predictive tail.
+3. Present the weekend association, sensitivity and conditional uncertainty.
+4. Show the predictive figure: reliable sampling, weak winter prediction.
+5. Explain the station/season/time bottlenecks and hand over to Model B and the team's comparison.
 
-Run commands and data contract: [models/README.md](../models/README.md).
+[Reproduction commands](../analysis/pooled/README.md) · [Evidence index](pooled-evaluation/README.md).
