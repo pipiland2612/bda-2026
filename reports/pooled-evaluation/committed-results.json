@@ -1,0 +1,132 @@
+{
+  "full_fit": {
+    "divergences": 0,
+    "sampling_passed": true,
+    "predictive_adequacy": "Requires review of predictive plots and temporal residuals",
+    "weekend": {
+      "ratio_median": 0.7035802827458322,
+      "ratio_interval_95": [
+        0.6663735553659746,
+        0.7404183760831635
+      ],
+      "percent_median": -29.641971725416774,
+      "percent_interval_95": [
+        -33.36264446340253,
+        -25.958162391683647
+      ],
+      "probability_lower": 1.0
+    },
+    "rows": 1441,
+    "wall_seconds": 9.988126993179321,
+    "worst_rhat": 1.0029186271449508,
+    "min_bulk_ess": 2483.4982979808583,
+    "min_tail_ess": 2499.4074496204353
+  },
+  "train_fit": {
+    "divergences": 0,
+    "sampling_passed": true,
+    "predictive_adequacy": "Requires review of predictive plots and temporal residuals",
+    "weekend": {
+      "ratio_median": 0.6926004409217574,
+      "ratio_interval_95": [
+        0.6538050991023924,
+        0.7333681049539423
+      ],
+      "percent_median": -30.739955907824257,
+      "percent_interval_95": [
+        -34.61949008976077,
+        -26.663189504605768
+      ],
+      "probability_lower": 1.0
+    },
+    "rows": 1091,
+    "wall_seconds": 8.182439088821411,
+    "worst_rhat": 1.002648693070447,
+    "min_bulk_ess": 2523.8788888859663,
+    "min_tail_ess": 2539.0225658188924
+  },
+  "wide_fit": {
+    "divergences": 0,
+    "sampling_passed": true,
+    "predictive_adequacy": "Requires review of predictive plots and temporal residuals",
+    "weekend": {
+      "ratio_median": 0.70223335384821,
+      "ratio_interval_95": [
+        0.6660238917102288,
+        0.7396947823416727
+      ],
+      "percent_median": -29.776664615178998,
+      "percent_interval_95": [
+        -33.397610828977115,
+        -26.030521765832724
+      ],
+      "probability_lower": 1.0
+    },
+    "rows": 1441,
+    "wall_seconds": 8.927601099014282,
+    "worst_rhat": 1.0023383031485549,
+    "min_bulk_ess": 2249.738470117982,
+    "min_tail_ess": 2014.1036001099487
+  },
+  "train_rows": 1091,
+  "test_rows": 350,
+  "holdout": [
+    {
+      "station": "all",
+      "n": 350,
+      "mae": 6.0411807851132995,
+      "rmse": 7.632005749772453,
+      "coverage_95": 0.9028571428571428,
+      "mean_interval_width_95": 30.48952310218209,
+      "mean_log_predictive_density": -3.3071068554888305
+    },
+    {
+      "station": "Espoo Lepp\u00e4vaara L\u00e4kkisep\u00e4nkuja",
+      "n": 91,
+      "mae": 5.849113734301058,
+      "rmse": 7.497572883626134,
+      "coverage_95": 0.9120879120879121,
+      "mean_interval_width_95": 31.172551721821776,
+      "mean_log_predictive_density": -3.2326822530060997
+    },
+    {
+      "station": "Helsinki Kallio 2",
+      "n": 81,
+      "mae": 9.047202922070182,
+      "rmse": 10.186199055032139,
+      "coverage_95": 0.7407407407407407,
+      "mean_interval_width_95": 30.426756364662893,
+      "mean_log_predictive_density": -3.7032052217437403
+    },
+    {
+      "station": "Helsinki M\u00e4kel\u00e4nkatu",
+      "n": 90,
+      "mae": 4.706604582482296,
+      "rmse": 6.1135392868893685,
+      "coverage_95": 0.9777777777777777,
+      "mean_interval_width_95": 28.9187245809587,
+      "mean_log_predictive_density": -3.293104650186815
+    },
+    {
+      "station": "Vantaa Tikkurila Neilikkatie",
+      "n": 88,
+      "mae": 4.837796316558715,
+      "rmse": 6.309226841748752,
+      "coverage_95": 0.9659090909090909,
+      "mean_interval_width_95": 31.447481832431507,
+      "mean_log_predictive_density": -3.033798555903175
+    }
+  ],
+  "benchmarks": [
+    {
+      "model": "training_global_mean",
+      "mae": 5.881916455952276,
+      "rmse": 7.186341132623441
+    },
+    {
+      "model": "training_station_mean",
+      "mae": 5.0470925766323775,
+      "rmse": 6.4975792525030265
+    }
+  ]
+}

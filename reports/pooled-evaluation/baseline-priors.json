@@ -1,0 +1,47 @@
+{
+  "approved": false,
+  "rationale": "Provisional analyst assumptions for user-requested exploratory real-data check. Not elicited, calibrated to these outcomes, or team-approved. Intercept assumes a 20 ug/m3 median at reference weather; effects allow both signs.",
+  "sources": [
+    "docs/prior-plan.md: ratio-to-log coefficient method only; numerical ranges are analyst assumptions"
+  ],
+  "alpha": {
+    "mean": 2.995732273553991,
+    "sd": 0.75
+  },
+  "sigma": {
+    "scale": 0.5
+  },
+  "coefficients": {
+    "weekend": {
+      "lower": 0.5,
+      "upper": 2.0,
+      "unit": "weekend versus weekday"
+    },
+    "wind": {
+      "lower": 0.5,
+      "upper": 1.5,
+      "unit": "+2 m/s",
+      "measure": "mean_of_hourly_maxima"
+    },
+    "temperature": {
+      "lower": 0.5,
+      "upper": 2.0,
+      "unit": "+10 degC"
+    },
+    "rain": {
+      "lower": 0.9,
+      "upper": 1.1,
+      "unit": "+1 mm daily reported precipitation"
+    },
+    "sin": {
+      "lower": 0.25,
+      "upper": 4.0,
+      "unit": "+1 annual sine"
+    },
+    "cos": {
+      "lower": 0.25,
+      "upper": 4.0,
+      "unit": "+1 annual cosine"
+    }
+  }
+}
