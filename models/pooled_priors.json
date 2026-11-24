@@ -1,0 +1,15 @@
+{
+  "approved": false,
+  "rationale": "Elicitation template: replace nulls with justified values before fitting. Alpha is on the log concentration scale; sigma is a log-scale residual SD. Coefficient bounds describe a central 95% concentration-median ratio range per increment.",
+  "sources": [],
+  "alpha": {"mean": null, "sd": null},
+  "sigma": {"scale": null},
+  "coefficients": {
+    "weekend": {"lower": null, "upper": null, "unit": "weekend versus weekday"},
+    "wind": {"lower": null, "upper": null, "unit": "+2 m/s of the agreed wind measure", "measure": null},
+    "temperature": {"lower": null, "upper": null, "unit": "+10 degC"},
+    "rain": {"lower": null, "upper": null, "unit": "+1 mm daily precipitation"},
+    "sin": {"lower": null, "upper": null, "unit": "+1 annual sine term; review joint seasonal amplitude"},
+    "cos": {"lower": null, "upper": null, "unit": "+1 annual cosine term; review joint seasonal amplitude"}
+  }
+}

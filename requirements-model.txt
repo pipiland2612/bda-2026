@@ -1,0 +1,10 @@
+# Tested lock is in requirements-model.lock.txt (Python 3.13, macOS arm64).
+pymc>=5.26,<6
+arviz<1
+numpy
+pandas
+xarray
+matplotlib>=3.9,<3.11
+pytest
+netCDF4
+ruff
