@@ -1,0 +1,177 @@
+---
+title: "BDA-Project"
+author: "Andrei"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidybayes)
+library(tidyverse)
+library(brms)
+library(cmdstanr)
+library(lme4)
+library(priorsense)
+library(projpred)
+library(corrplot) 
+
+cmdstan_installed <- function(){
+  res <- try(out <- cmdstanr::cmdstan_path(), silent = TRUE)
+  !inherits(res, "try-error")
+}
+if(!cmdstan_installed()){
+    install_cmdstan()
+}
+
+set.seed(42)
+```
+
+
+## Fetch and process data
+
+```{r data loading}
+files <- list.files("../data/raw", pattern = "\\.csv$", full.names = TRUE)
+
+dfs <- files |> map(read_csv, na = c("", "NA", "-"), show_col_types = FALSE)
+
+# Helper function to split into no2 stations and weather stations by which columns they contain
+has_col <- \(pat, dataframe) keep(dataframe, \(d) any(str_detect(names(d), pat)))
+
+key <- c("year", "month", "day", "time")
+clean <- \(d) rename(d, station = `Observation station`, year = Year, month = Month,
+                     day = Day, time = `Time [Local time]`)
+
+# Make dataframe of weather data
+weather <- has_col("^Maximum wind", dfs) |>
+  map(clean) |>
+  list_rbind() |>
+  rename(wind = starts_with("Maximum wind"),
+         precip = starts_with("Precipitation"),
+         temp = starts_with("Average temp"))
+
+# Make dataframe of no2 data
+nitrogen <- has_col("^Nitrogen", dfs) |>
+  map(clean) |>
+  list_rbind() |>
+  rename(no2 = starts_with("Nitrogen"))
+
+
+#Regional hourly mean across the 3 weather stations
+weather_summarized <- weather |> summarise(across(c(wind, precip, temp), \(x) mean(x, na.rm = TRUE)), .by = all_of(key))   
+
+dat <- nitrogen |>
+  left_join(weather_summarized, by = key) |>
+  mutate(station = factor(station),
+         datetime = make_datetime(year, month, day, as.integer(str_sub(time, 1, 2)), tz = "UTC"),
+         hour = hour(datetime),
+         wday = wday(datetime, week_start = 1),
+         across(c(wind, precip, temp), \(x) as.numeric(scale(x)), .names = "{.col}_z")) |>
+  drop_na(no2, temp, wind, precip) |>
+  arrange(station, datetime)
+
+dat_main <- subset(dat, no2 > 0) |> 
+  mutate(log_no2 = log(no2),
+         lwind_z = as.numeric(scale(log1p(wind))),
+         yday    = yday(datetime),
+         wday_f  = factor(wday),
+         weekend = as.numeric(wday >= 6))
+
+```
+
+```{r}
+preds <- c("temp_z", "lwind_z", "precip", "hour", "yday", "wday")
+
+# Correlation heatmap
+cm <- dat_main |> select(log_no2, all_of(preds)) |> cor(method = "spearman", use = "complete.obs")
+corrplot(cm, method = "color", type = "upper", addCoef.col = "black",
+         tl.col = "black", number.cex = 0.8, col = COL2("RdBu", 200))
+
+# Check by station correlations
+dat_main |> group_by(station) |>
+  summarise(across(all_of(preds), \(x) cor(x, log_no2, method = "spearman")))
+
+# Check by station slopes with a linear model
+dat_main |>
+  group_by(station) |>
+  summarise(wind_slope = coef(lm(log_no2 ~ temp_z + lwind_z + wday))["lwind_z"],
+            temp_slope = coef(lm(log_no2 ~ temp_z + lwind_z + wday))["temp_z"],
+            weekend_slope = coef(lm(log_no2 ~ temp_z + lwind_z + weekend))["weekend"])
+```
+
+
+## Modeling
+```{r modeling, echo=FALSE, results='hide', message=TRUE, warning=TRUE}
+# Define formula
+no2_hierarchical_formula_main <- bf(
+  log_no2 ~ temp_z * lwind_z + weekend + (1 + weekend | station) + 
+    s(hour, bs = 'cc') + s(yday, bs = 'cc'),
+  family = "gaussian",
+  center = FALSE
+)
+
+# Define priors
+no2_hierarchical_priors_main <- c(
+  prior(normal(log(10), 1), class = "b",     coef = "Intercept"),
+  prior(normal(0, 1),       class = "b"),
+  prior(normal(0, 0.5),     class = "sd",    coef = "Intercept", group = "station"),
+  prior(normal(0, 0.5),     class = "sd",    coef = "weekend",   group = "station"),
+  prior(normal(0, 2),       class = "sigma", lb = 0),
+  prior(normal(0, 1),       class = "sds"),
+  prior(lkj(2),             class = "cor")
+  )
+
+# Fit, consider changing cores and threads to better suit your machine.
+no2_hierarchical_fit_main <- brm(
+    formula = no2_hierarchical_formula_main,
+    data    = dat_main,
+    backend = "cmdstanr",
+    chains  = 4,
+    cores   = 4,
+    threads = threading(threads = 4),
+    file    = file.path("saved_models", "main_model_v3"),
+    control = list(adapt_delta = 0.95),
+    seed    = 42,
+    )
+```
+
+## Evaluation of model
+
+```{r pp}
+pp_check(no2_hierarchical_fit_main, type = "dens_overlay", ndraws = 100)
+pp_check(no2_hierarchical_fit_main, type = "ecdf_overlay", ndraws = 100)
+pp_check(no2_hierarchical_fit_main, type = "loo_pit_overlay", ndraws = 300)
+```
+
+
+```{r more pp}
+pp_check(no2_hierarchical_fit_main, type = "stat_grouped", group = "station", stat = "mean", ndraws = 200)
+pp_check(no2_hierarchical_fit_main, type = "stat_grouped", group = "station", stat = "sd",   ndraws = 200)
+pp_check(no2_hierarchical_fit_main, type = "stat_grouped", group = "station", stat = "max",  ndraws = 200)
+pp_check(no2_hierarchical_fit_main, type = "stat_grouped", group = "station", stat = \(y) quantile(y, 0.95), ndraws = 200)
+```
+
+
+```{r summary and loo}
+summary(no2_hierarchical_fit_main)
+
+no2_hierarchical_fit_main <- add_criterion(no2_hierarchical_fit_main, criterion = "loo")
+loo(no2_hierarchical_fit_main)
+```
+
+
+```{r conditional effects}
+me <- conditional_effects(no2_hierarchical_fit_main, re_formula = NULL)
+plot(me, ncol = 4, points = TRUE, ask = FALSE)  
+```
+
+
+```{r prior analysis}
+powerscale_sensitivity(no2_hierarchical_fit_main)
+```
+
+
+
+
+

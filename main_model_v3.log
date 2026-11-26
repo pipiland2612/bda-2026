@@ -1,0 +1,12 @@
+All 4 chains finished successfully.
+Mean chain execution time: 3040.0 seconds.
+Total execution time: 3119.2 seconds.
+
+Registered S3 method overwritten by 'data.table':
+  method           from
+  print.data.table     
+Warning: 16 of 4000 (0.0%) transitions ended with a divergence.
+See https://mc-stan.org/misc/warnings for details.
+
+Warning: 2065 of 4000 (52.0%) transitions hit the maximum treedepth limit of 10.
+See https://mc-stan.org/misc/warnings for details.
