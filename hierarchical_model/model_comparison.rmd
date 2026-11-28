@@ -239,7 +239,43 @@ powerscale_sensitivity(no2_hierarchical_fit)
 powerscale_sensitivity(no2_pooled_fit)
 ```
 
+## Forward-time holdout
 
+The pointwise LOO comparison above is not a future-time evaluation. To compare the
+hourly pooled and hierarchical models on shared future dates, run from the repository
+root:
 
+```sh
+Rscript hierarchical_model/validate_time_holdout.R
+```
 
+The script fits both models on dates before 1 October 2024 and evaluates October–December
+2024, keeping all stations on each date in the same partition. It reports overall, monthly,
+station, and station-by-month predictive metrics, plus training-only population and
+hierarchical station weekend ratios with 95% credible intervals. The two fits use the same
+fixed-effect priors and residual prior; weather transformations are estimated on training
+data only. Results are written to the ignored `outputs/hourly-time-holdout/` directory.
+
+This is a development diagnostic, not an untouched final test: the 2024 observations and
+Q4 period have already been examined elsewhere in the project. It also retains the report's
+supplied hour labels and cyclic-spline boundaries, so the timestamp and boundary limitations
+described above remain.
+
+## Recreate posterior predictive check figures
+
+To generate posterior predictive check plots from the saved fits without refitting, run from
+the repository root:
+
+```sh
+Rscript hierarchical_model/plot_posterior_checks.R
+```
+
+By default this loads the saved pooled and hierarchical fits. To check the older main fit
+instead, the logged `main_model_v3` run would need to be refit: its `.rds` file is only two
+bytes and contains no saved posterior draws. PNGs are written to `reports/figures/ppc/`.
+These checks use the modeled `log_no2` response; they do not diagnose sampler convergence
+or replace forward-time validation.
+
+The plotting script needs the R packages `brms`, `cmdstanr`, `bayesplot`, `loo`, and
+`ggplot2`. It reads saved draws and does not compile or resample the models.
 

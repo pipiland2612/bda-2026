@@ -1,0 +1,27 @@
+ Family: gaussian 
+  Links: mu = identity 
+Formula: log_no2 ~ temp_z * lwind_z + weekend + s(hour, bs = "cc", k = 10) + s(yday, bs = "cc", k = 10) 
+   Data: train (Number of observations: 26201) 
+  Draws: 4 chains, each with iter = 2000; warmup = 1000; thin = 1;
+         total post-warmup draws = 4000
+
+Smoothing Spline Hyperparameters:
+             Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+sds(shour_1)     0.14      0.04     0.09     0.26 1.00      413      804
+sds(syday_1)     0.25      0.08     0.14     0.46 1.01      445      687
+
+Regression Coefficients:
+               Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+Intercept          2.43      0.00     2.42     2.44 1.00     3665     3147
+temp_z            -0.01      0.01    -0.03     0.01 1.00     3339     2686
+lwind_z           -0.40      0.00    -0.41    -0.40 1.00     4677     2871
+weekend           -0.41      0.01    -0.43    -0.40 1.00     3201     2911
+temp_z:lwind_z     0.05      0.00     0.04     0.06 1.00     5263     3227
+
+Further Distributional Parameters:
+      Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+sigma     0.62      0.00     0.62     0.63 1.00     5644     2830
+
+Draws were sampled using sample(hmc). For each parameter, Bulk_ESS
+and Tail_ESS are effective sample size measures, and Rhat is the potential
+scale reduction factor on split chains (at convergence, Rhat = 1).
